@@ -15,6 +15,7 @@
 * **Firmware Author**: **rA9**
 * **Upstream Base Project**: [1orz/project-cpe](https://github.com/1orz/project-cpe)
 * **Official Community QQ Channel**: [https://pd.qq.com/s/6a7enqayi?b=2](https://pd.qq.com/s/6a7enqayi?b=2)
+* **Diagnostics, ADB Analysis & Bugfixes**: Powered by **Google Antigravity AI** (Advanced Agentic Coding Team)
 * **Hardware Platform**: Unisoc V510 5G Platform / 5G Smart Shell CPE Module
 * **Tested Firmware Build**: `RM500UCNAAR03A11M2G_01.001.01.001` (Yocto Linux 4.14.98 aarch64)
 
@@ -39,7 +40,9 @@
 ### 📌 致謝與社群資訊
 
 * **韌體作者**：**rA9**
+* **上遊開源專案**：[1orz/project-cpe](https://github.com/1orz/project-cpe)
 * **官方 QQ 頻道連結**：[https://pd.qq.com/s/6a7enqayi?b=2](https://pd.qq.com/s/6a7enqayi?b=2)
+* **深度診斷、ADB 分析與修復**：由 **Google Antigravity AI** (Advanced Agentic Coding Team) 全程協助與分析
 * **硬體平台**：紫光展銳 Unisoc V510 5G 晶片 / 5G 智慧殼模組
 * **測試韌體版本**：`RM500UCNAAR03A11M2G_01.001.01.001` (Yocto Linux 4.14.98 aarch64)
 
@@ -64,7 +67,9 @@
 ### 📌 致谢与社区信息
 
 * **固件作者**：**rA9**
+* **上游开源项目**：[1orz/project-cpe](https://github.com/1orz/project-cpe)
 * **官方 QQ 频道链接**：[https://pd.qq.com/s/6a7enqayi?b=2](https://pd.qq.com/s/6a7enqayi?b=2)
+* **深度诊断、ADB 分析与修复**：由 **Google Antigravity AI** (Advanced Agentic Coding Team) 全程协助与分析
 * **硬件平台**：紫光展锐 Unisoc V510 5G 芯片 / 5G 智能壳模块
 * **测试固件版本**：`RM500UCNAAR03A11M2G_01.001.01.001` (Yocto Linux 4.14.98 aarch64)
 
