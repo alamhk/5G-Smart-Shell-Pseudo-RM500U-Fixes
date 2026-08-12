@@ -11,7 +11,7 @@ In cellular 5G networks, certain mobile network operators (MNOs) or regional cel
 When an IP rotation or PDP context deactivation occurs:
 * **Carrier Side**: Existing TCP sessions on the old IP address are dropped by the operator's CGNAT gateway.
 * **Modem Side**: The Unisoc V510 SIPA DMA hardware accelerator closes DMA Channel 0 (`sipa_usb: sipa 0 channel not opened yet`), dropping all ingress/egress Ethernet frames on `usb0`.
-* **Traditional Router Response (High Disconnection Delay)**: Stock OpenWrt dialer scripts (`qmodem`) react by deleting the UCI network interface, recreating it, and running `/etc/init.d/network reload` and `/etc/init.d/firewall reload`, causing a **15 to 20 second network outage** for LAN clients.
+* **Traditional Router Response (High Disconnection Delay)**: Third-party OpenWrt qmodem dialer scripts (`qmodem`) react by deleting the UCI network interface, recreating it, and running `/etc/init.d/network reload` and `/etc/init.d/firewall reload`, causing a **15 to 20 second network outage** for LAN clients.
 
 This document details the root causes, AT command mechanisms, and **sub-second fast recovery strategies (0.2s)** to eliminate reload delays.
 
@@ -20,7 +20,7 @@ This document details the root causes, AT command mechanisms, and **sub-second f
 ## 2. Root Cause Analysis & AT Command Mechanics
 
 ### A. The 15-Second Reload Overhead in Stock Dialer Scripts
-Stock router scripts execute the following sequential teardown upon detecting an IP change or drop:
+Third-party OpenWrt qmodem dialer scripts execute the following sequential teardown upon detecting an IP change or drop:
 1. `delete_interface`: Deletes `network.1_1_2` from UCI and runs `/etc/init.d/network reload` (~5s).
 2. `create_interface`: Re-injects `network.1_1_2` into UCI and runs `/etc/init.d/network reload` + `/etc/init.d/firewall reload` (~8s).
 3. Total outage: **13 to 18 seconds**, during which LAN devices lose default routing and firewall state.
