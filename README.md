@@ -25,6 +25,7 @@
 
 | Document | Topic & Description |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | Technical analysis of frequent cellular IP rotation/handovers, AT command mechanics (`state=0` vs `state=1`), and sub-second fast recovery (<1s). |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | Step-by-step setup guide for **ECM IP Passthrough / Bridge Mode** (`nat,0`), including persistent NV config fixes and host router integration. |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | Technical feedback report for firmware author **rA9** detailing the 3 modem-side bugs (SIPA auto-suspend, `/32` netmask, and passthrough DHCP server absence). |
 | 📄 **[Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md](Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md)** | Technical report detailing root causes and persistent fix scripts for RNDIS NAT Mode (`nat,1`) DHCP leasing failures. |
@@ -52,6 +53,7 @@
 
 | 文件名稱 | 主題與內容說明 |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | **頻繁基站 IP 輪換與秒級恢復指南**：分析基站 IP 漂移機制、AT 指令 `<state>=0` 與 `<state>=1` 8秒退避差異，及 0.2 秒極速救網對策。 |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | **ECM 模式 IP 直通 / Bridge 橋接模式** (`nat,0`) 設定指南，含 NV 參數修正與路由器對接說明。 |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | 專門反饋給作者 **rA9** 嘅 Modem 側三大 Bug 報告（SIPA 硬體休眠、`/32` 子網掩碼及直通 DHCP 服務缺失）。 |
 | 📄 **[Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md](Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md)** | **RNDIS NAT 模式** (`nat,1`) DHCP 無法派發 IP 嘅底層原因分析與持久化修復報告。 |
@@ -79,6 +81,7 @@
 
 | 文档名称 | 主题与内容说明 |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | **频繁基站 IP 轮换与秒级恢复指南**：分析基站 IP 漂移机制、AT 指令 `<state>=0` 与 `<state>=1` 8秒退避差异，及 0.2 秒极速救网对策。 |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | **ECM 模式 IP 直通 / Bridge 桥接模式** (`nat,0`) 设置指南，含 NV 参数修正与主路由器对接说明。 |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | 专门反馈给作者 **rA9** 的 Modem 侧三大 Bug 报告（SIPA 硬件休眠、`/32` 子网掩码及直通 DHCP 服务缺失）。 |
 | 📄 **[Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md](Pseudo_RM500U_RNDIS_DHCP_Bugfix_Report.md)** | **RNDIS NAT 模式** (`nat,1`) DHCP 无法分配 IP 的底层原因分析与持久化修复报告。 |
@@ -110,7 +113,7 @@ end ${SUBNET_PREFIX}.200
 interface usb0
 opt dns ${USB0_IP} 223.5.5.5
 option subnet 255.255.255.0
-opt router ${USB0_IP}
+opt router ${SUBNET_PREFIX}.1
 opt lease 86400
 EOF
 
