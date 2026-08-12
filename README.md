@@ -13,6 +13,7 @@
 ### 📌 Project & Firmware Acknowledgments
 
 * **Firmware Author**: **rA9**
+* **Upstream Base Project**: [1orz/project-cpe](https://github.com/1orz/project-cpe)
 * **Official Community QQ Channel**: [https://pd.qq.com/s/6a7enqayi?b=2](https://pd.qq.com/s/6a7enqayi?b=2)
 * **Hardware Platform**: Unisoc V510 5G Platform / 5G Smart Shell CPE Module
 * **Tested Firmware Build**: `RM500UCNAAR03A11M2G_01.001.01.001` (Yocto Linux 4.14.98 aarch64)
