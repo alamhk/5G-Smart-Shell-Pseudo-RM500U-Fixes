@@ -42,7 +42,7 @@ When `<state>=1` is used, the modem's internal firmware enforces an **initial 8-
 
 ---
 
-## 3. Serial Port Lock Vulnerability & Permanent Fix (`tom_modem -t 2`)
+## 3. Serial Port Lock Vulnerability & Permanent Fix (`tom_modem -t 5`)
 
 During deep diagnostic log analysis of unrecovered disconnections, a critical serial port deadlock condition was identified:
 
@@ -55,7 +55,7 @@ During deep diagnostic log analysis of unrecovered disconnections, a critical se
   When LuCI or background status loops polled modem status while `/dev/ttyUSB3` was busy, dozens of stuck `tom_modem` processes accumulated in memory, permanently locking `/dev/ttyUSB3`.
 
 * **Permanent Solution**:
-  1. Patch `/usr/share/qmodem/modem_util.sh` to enforce a 2-second timeout on all AT calls:
+  1. Patch `/usr/share/qmodem/modem_util.sh` to enforce a 5-second timeout on all AT calls:
      ```sh
      tom_modem $use_ubus_flag -d $at_port -o a -c "$atcmd" -t 2 $options
      ```
@@ -155,7 +155,7 @@ Rather than relying purely on polling ICMP pings, the host system can listen to 
 
 | Metric / Scenario | Third-Party Dialer (`qmodem`) | Optimized Direct AT Strategy |
 | :--- | :--- | :--- |
-| **Serial Port Lock Risk** | ❌ High (Stuck `tom_modem` processes) | ✅ **Zero (`tom_modem -t 2` patched)** |
+| **Serial Port Lock Risk** | ❌ High (Stuck `tom_modem` processes) | ✅ **Zero (`tom_modem -t 5` patched)** |
 | **Interface Delete / Rebuild** | ❌ Yes (Deletes & recreates `1_1_2`) | ✅ **No (Zero interface modification)** |
 | **Network & Firewall Reload** | ❌ Yes (`/etc/init.d/network reload`) | ✅ **No (0s Reload)** |
 | **Modem Backoff Delay** | ❌ 8s ~ 16s (`state=1`) | ✅ **0s (`state=0` Synchronous)** |
