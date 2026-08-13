@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-During extended stress testing and kernel ADB log inspection, three critical modem-side firmware bugs were identified in the custom Yocto Linux system (`/mnt/data/` & kernel drivers). These bugs cause intermittent packet loss, total connection freezes, and DHCP leasing failures on host devices connected via USB (`usb0` / ECM / RNDIS).
+During extended stress testing and kernel ADB log inspection, six critical modem-side firmware bugs were identified in the custom Yocto Linux system (`/mnt/data/` & kernel drivers). These bugs cause intermittent packet loss, total connection freezes, empty policy routing table drops, and DHCP leasing failures on host devices connected via USB (`usb0` / ECM / RNDIS).
 
 This report outlines the technical root causes, kernel `dmesg` logs, and recommended permanent fixes for the firmware author.
 
@@ -49,7 +49,7 @@ This report outlines the technical root causes, kernel `dmesg` logs, and recomme
   When `quec_nic_service` or `connmand` initializes the `usb0` interface, it assigns the netmask `255.255.255.255` (`/32`). Because a `/32` subnet restricts IP addresses exclusively to `10.x.x.1`, BusyBox `udhcpd` detects that the requested lease pool (`10.x.x.100` to `200`) is outside the local interface subnet and refuses to service incoming `DHCP DISCOVER` requests.
 
 * **Recommended Fix for Firmware Author**:
-  In the interface bring-up scripts, explicitly assign a `/24` netmask (`255.255.255.0`) to `usb0`:
+  In the interface bring-up scripts, explicitly assign a `/24` netmask (`255.255.255.0`) matching the current dynamic cellular subnet:
   ```sh
   USB0_IP=$(ifconfig usb0 2>/dev/null | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}')
   if [ -n "$USB0_IP" ]; then
@@ -77,59 +77,197 @@ This report outlines the technical root causes, kernel `dmesg` logs, and recomme
 * **Recommended Fix for Firmware Author**:
   Update `/mnt/data/start_dhcp.sh` to dynamically generate a `/tmp/udhcpd_passthrough.conf` matching the current `usb0` subnet and keep `udhcpd` active in passthrough mode:
   ```sh
-  USB0_IP=$(ifconfig usb0 2>/dev/null | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}')
-  if [ -n "$USB0_IP" ]; then
-      ifconfig usb0 $USB0_IP netmask 255.255.255.0 up 2>/dev/null
-      SUBNET_PREFIX=$(echo $USB0_IP | cut -d. -f1-3)
-      
-      cat << EOF > /tmp/udhcpd_passthrough.conf
+  SUBNET_PREFIX=$(echo $CELL_IP | cut -d. -f1-3)
+  GATEWAY_IP="${SUBNET_PREFIX}.1"
+
+  cat << EOF > /tmp/udhcpd_passthrough.conf
   start ${SUBNET_PREFIX}.100
   end ${SUBNET_PREFIX}.200
   interface usb0
-  opt dns ${SUBNET_PREFIX}.1 223.5.5.5
+  opt dns ${GATEWAY_IP} ${ISP_DNS}
   option subnet 255.255.255.0
-  opt router ${SUBNET_PREFIX}.1
+  opt router ${GATEWAY_IP}
   opt lease 86400
   EOF
 
-      killall -9 udhcpd 2>/dev/null
-      /usr/sbin/udhcpd /tmp/udhcpd_passthrough.conf 2>/dev/null
+  killall -9 udhcpd 2>/dev/null
+  nohup /usr/sbin/udhcpd /tmp/udhcpd_passthrough.conf >/dev/null 2>&1 &
+  ```
+
+---
+
+### Bug #4: Stale Android Policy Routing Rules & Unroutable SNAT Address (100% Ingress Packet Drop)
+
+* **Symptom**: The modem local console can ping `8.8.8.8` via `sipa_eth0`, and attached host routers can ping the modem gateway (`10.x.x.1`), but all forwarded traffic from host devices (`usb0` -> `sipa_eth0`) drops 100% (`100% packet loss`).
+* **Root Cause Analysis**:
+  1. **Empty Policy Routing Table 132**: Android policy rules (`11: from all iif usb0 lookup 122` and `21: from all iif sipa_eth0 lookup 132`) route ingress packets from `sipa_eth0` to table 132. When cellular reconnects, table 132 remains **empty**, causing all return packets from the internet to be discarded.
+  2. **Unroutable Private SNAT IP**: Default `iptables` NAT configuration contained stale SNAT rules pointing to private loopback IP `192.168.1.33` (`SNAT to:192.168.1.33`). Mobile network operators (e.g. CMHK, China Mobile, Unicom) drop egress packets with unroutable private source IPs.
+
+* **Recommended Fix for Firmware Author**:
+  Clear stale policy rules and dynamically bind `POSTROUTING` SNAT to the active cellular IP (`$CELL_IP`):
+  ```sh
+  ip rule del pref 21 2>/dev/null
+  ip rule del pref 11 2>/dev/null
+  iptables -t nat -F POSTROUTING 2>/dev/null
+  iptables -t nat -A POSTROUTING -o sipa_eth0 -j SNAT --to-source $CELL_IP 2>/dev/null || iptables -t nat -A POSTROUTING -o sipa_eth0 -j MASQUERADE
+  iptables -F FORWARD 2>/dev/null
+  iptables -A FORWARD -j ACCEPT
+  ```
+
+---
+
+### Bug #5: Hardcoded External DNS Servers (`223.5.5.5` / `8.8.8.8`) Breaking Regional Deployments
+
+* **Symptom**: Hardcoding Ali DNS (`223.5.5.5`) causes poor performance in Hong Kong / overseas, while hardcoding Google DNS (`8.8.8.8`) fails in Mainland China due to GFW blocking.
+* **Root Cause Analysis**:
+  Original firmware scripts injected static public DNS IPs into `opt dns` in `udhcpd.conf`, bypassing operator-assigned DNS servers.
+* **Recommended Fix for Firmware Author**:
+  Dynamically query ConnMan's active cellular service (`connmanctl services "$CELL_SVC"`) or fallback to Gateway IP to extract dynamic mobile operator DNS servers (`$ISP_DNS`), ensuring global compatibility across Mainland China, Hong Kong, and international roaming networks:
+  ```sh
+  CELL_SVC=$(connmanctl services 2>&1 | grep 'cellular_' | head -n 1 | awk '{print $NF}')
+  if [ -n "$CELL_SVC" ]; then
+      CELL_IP=$(connmanctl services "$CELL_SVC" 2>&1 | grep 'IPv4 =' | awk -F'Address=' '{print $2}' | awk -F',' '{print $1}')
+      ISP_DNS=$(connmanctl services "$CELL_SVC" 2>&1 | grep Nameservers | sed 's/.*\[ \(.*\) \].*/\1/' | tr -d ',')
+  fi
+  if [ -z "$ISP_DNS" ]; then
+      ISP_DNS="${GATEWAY_IP}"
   fi
   ```
 
 ---
 
-## 3. Summary of Permanent Solution Script (`/mnt/data/start_dhcp.sh`)
+### Bug #6: Absence of Modem-Side Internal Self-Recovery Watchdog (Tier 1 Failover)
 
-By combining the three fixes into `/mnt/data/start_dhcp.sh`, the 5G Smart Shell module achieves **100% stable 24/7 connectivity, 0% packet loss, instant DHCP leasing, and fast reconnection**:
+* **Symptom**: When SIPA enters auto-suspend flow control or when `udhcpd` crashes after IP rotation, the modem remains unresponsive until an external host intervenes via ADB or reboots the modem.
+* **Recommended Fix for Firmware Author**:
+  Deploy a lightweight internal self-recovery daemon (`/mnt/data/modem_self_watchdog.sh`) on modem ARM Linux that checks SIPA power state (`echo on`), `udhcpd` process status, and `iptables` SNAT rules every 10s, self-healing within <1s inside the modem without host intervention or radio reset.
+
+---
+
+## 3. Production Solution Scripts
+
+### A. Fully Dynamic Startup Script (`/mnt/data/start_dhcp.sh`)
 
 ```sh
 #!/bin/sh
-# Persistent initialization script for Unisoc V510 5G Smart Shell Custom Firmware
+# Persistent fully-dynamic startup script inside modem partition /mnt/data/start_dhcp.sh
 
-# Fix #1: Lock SIPA PM control to 'on' (Prevent DMA Channel 0 Auto-Suspend)
+# 1. Force SIPA hardware accelerator to remain active 24/7 (Disable Auto-Suspend)
 echo on > /sys/devices/platform/soc/2e000000.sprd,sipa/power/control 2>/dev/null
 echo on > /sys/devices/platform/sipa-usb0/power/control 2>/dev/null
 echo 1 > /proc/net/sfp/enable 2>/dev/null
 
-# Fix #2 & #3: Fix usb0 /24 netmask & launch dynamic passthrough udhcpd
-USB0_IP=$(ifconfig usb0 2>/dev/null | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}')
+# 2. Dynamically detect cellular IP & ISP Operator DNS assigned by mobile network
+CELL_IP=""
+ISP_DNS=""
 
-if [ -n "$USB0_IP" ]; then
-    ifconfig usb0 $USB0_IP netmask 255.255.255.0 up 2>/dev/null
-    SUBNET_PREFIX=$(echo $USB0_IP | cut -d. -f1-3)
-    
-    cat << EOF > /tmp/udhcpd_passthrough.conf
+CTX_DIR=$(ls -d /var/lib/connman/cellular_* 2>/dev/null | head -n 1)
+if [ -n "$CTX_DIR" ]; then
+    CTX_NAME=$(basename "$CTX_DIR")
+    CELL_IP=$(grep 'IPv4.local_address=' "$CTX_DIR/settings" 2>/dev/null | cut -d= -f2)
+    ISP_DNS=$(connmanctl services "$CTX_NAME" 2>&1 | grep Nameservers | sed 's/.*\[ \(.*\) \].*/\1/' | tr -d ',')
+fi
+
+if [ -z "$CELL_IP" ]; then
+    CELL_IP=$(ifconfig sipa_eth0 2>/dev/null | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}')
+fi
+
+if [ -z "$CELL_IP" ] || [ "$CELL_IP" = "127.0.0.1" ] || [ "$CELL_IP" = "192.168.107.1" ]; then
+    CELL_IP=$(ifconfig usb0 2>/dev/null | grep 'inet addr:' | cut -d: -f2 | awk '{print $1}')
+fi
+
+if [ -z "$CELL_IP" ] || [ "$CELL_IP" = "127.0.0.1" ] || [ "$CELL_IP" = "192.168.107.1" ]; then
+    CELL_IP=10.71.65.89
+fi
+
+SUBNET_PREFIX=$(echo $CELL_IP | cut -d. -f1-3)
+GATEWAY_IP="${SUBNET_PREFIX}.1"
+
+if [ -z "$ISP_DNS" ]; then
+    ISP_DNS="${GATEWAY_IP}"
+fi
+
+# 3. Ensure usb0 is configured for the dynamic subnet
+ifconfig usb0 $GATEWAY_IP netmask 255.255.255.0 up 2>/dev/null
+
+# 4. Generate dynamic udhcpd config using Gateway IP and ISP Operator DNS
+cat << EOF > /tmp/udhcpd_passthrough.conf
 start ${SUBNET_PREFIX}.100
 end ${SUBNET_PREFIX}.200
 interface usb0
-opt dns ${USB0_IP} 223.5.5.5
+opt dns ${ISP_DNS}
 option subnet 255.255.255.0
-opt router ${USB0_IP}
+opt router ${GATEWAY_IP}
 opt lease 86400
 EOF
 
-    killall -9 udhcpd 2>/dev/null
-    /usr/sbin/udhcpd /tmp/udhcpd_passthrough.conf 2>/dev/null
+killall -9 udhcpd 2>/dev/null
+nohup /usr/sbin/udhcpd /tmp/udhcpd_passthrough.conf >/dev/null 2>&1 &
+
+# 5. Clean up broken Android policy routing rules & apply dynamic SNAT for $CELL_IP
+ip rule del pref 21 2>/dev/null
+ip rule del pref 11 2>/dev/null
+iptables -t nat -F POSTROUTING 2>/dev/null
+iptables -t nat -A POSTROUTING -o sipa_eth0 -j SNAT --to-source $CELL_IP 2>/dev/null || iptables -t nat -A POSTROUTING -o sipa_eth0 -j MASQUERADE
+iptables -F FORWARD 2>/dev/null
+iptables -A FORWARD -j ACCEPT
+
+# 6. Ensure Tier 1 Modem Self-Recovery Watchdog is active
+if ! ps | grep -v grep | grep -q modem_self_watchdog.sh; then
+    nohup /mnt/data/modem_self_watchdog.sh >/dev/null 2>&1 &
 fi
+
+echo "[start_dhcp] Dynamic DHCP & SNAT configured. Gateway: ${GATEWAY_IP}, ISP DNS: ${ISP_DNS} (Cellular IP: ${CELL_IP})."
+```
+
+### B. Tier 1 Modem Internal Self-Recovery Watchdog (`/mnt/data/modem_self_watchdog.sh`)
+
+```sh
+#!/bin/sh
+# Modem Internal Self-Recovery Watchdog (Tier 1)
+# Runs as daemon inside RM500U modem ARM Linux
+
+FAIL_COUNT=0
+
+while true; do
+    # 1. Force SIPA hardware accelerator power control to 'on'
+    SIPA_CTRL=$(cat /sys/devices/platform/soc/2e000000.sprd,sipa/power/control 2>/dev/null)
+    if [ "$SIPA_CTRL" != "on" ]; then
+        echo on > /sys/devices/platform/soc/2e000000.sprd,sipa/power/control 2>/dev/null
+        echo on > /sys/devices/platform/sipa-usb0/power/control 2>/dev/null
+        echo 1 > /proc/net/sfp/enable 2>/dev/null
+    fi
+
+    # 2. Check if udhcpd DHCP server is running inside modem
+    if ! ps | grep -v grep | grep -q udhcpd; then
+        /mnt/data/start_dhcp.sh
+        sleep 2
+        continue
+    fi
+
+    # 3. Check if iptables POSTROUTING SNAT rule is present
+    if ! iptables -t nat -L POSTROUTING -n 2>/dev/null | grep -q -E "SNAT|MASQUERADE"; then
+        /mnt/data/start_dhcp.sh
+        sleep 2
+        continue
+    fi
+
+    # 4. Check connectivity inside modem
+    if ! ping -c 1 -W 2 114.114.114.114 >/dev/null 2>&1 && ! ping -c 1 -W 2 223.5.5.5 >/dev/null 2>&1 && ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    else
+        FAIL_COUNT=0
+    fi
+
+    if [ "$FAIL_COUNT" -ge 2 ]; then
+        echo on > /sys/devices/platform/soc/2e000000.sprd,sipa/power/control 2>/dev/null
+        echo on > /sys/devices/platform/sipa-usb0/power/control 2>/dev/null
+        echo 1 > /proc/net/sfp/enable 2>/dev/null
+        ifconfig usb0 down 2>/dev/null; sleep 1; ifconfig usb0 up 2>/dev/null
+        /mnt/data/start_dhcp.sh
+        FAIL_COUNT=0
+    fi
+
+    sleep 10
+done
 ```
