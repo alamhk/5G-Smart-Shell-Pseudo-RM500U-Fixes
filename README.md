@@ -25,6 +25,7 @@
 
 | Document | Topic & Description |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md](Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md)** | Technical guide & standalone script ([`rm500u_direct_at.py`](rm500u_direct_at.py)) for **Direct LibUSB AT Access on FreeBSD / OPNsense** without virtual serial ports. |
 | 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | Technical analysis of frequent cellular IP rotation/handovers, AT command mechanics (`state=0` vs `state=1`), and sub-second fast recovery (<1s). |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | Step-by-step setup guide for **ECM IP Passthrough / Bridge Mode** (`nat,0`), including persistent NV config fixes and host router integration. |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | Technical feedback report for firmware author **rA9** detailing the 3 modem-side bugs (SIPA auto-suspend, `/32` netmask, and passthrough DHCP server absence). |
@@ -53,6 +54,7 @@
 
 | 文件名稱 | 主題與內容說明 |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md](Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md)** | **FreeBSD / OPNsense Direct LibUSB AT 指令直通指南**：免驅動直通 USB Interface 4，附帶獨立開源工具腳本 ([`rm500u_direct_at.py`](rm500u_direct_at.py))。 |
 | 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | **頻繁基站 IP 輪換與秒級恢復指南**：分析基站 IP 漂移機制、AT 指令 `<state>=0` 與 `<state>=1` 8秒退避差異，及 0.2 秒極速救網對策。 |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | **ECM 模式 IP 直通 / Bridge 橋接模式** (`nat,0`) 設定指南，含 NV 參數修正與路由器對接說明。 |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | 專門反饋給作者 **rA9** 嘅 Modem 側三大 Bug 報告（SIPA 硬體休眠、`/32` 子網掩碼及直通 DHCP 服務缺失）。 |
@@ -81,6 +83,7 @@
 
 | 文档名称 | 主题与内容说明 |
 | :--- | :--- |
+| 📄 **[Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md](Pseudo_RM500U_FreeBSD_OPNsense_Direct_LibUSB_AT_Guide.md)** | **FreeBSD / OPNsense Direct LibUSB AT 指令直通指南**：免驱动直通 USB Interface 4，附带独立开源工具脚本 ([`rm500u_direct_at.py`](rm500u_direct_at.py))。 |
 | 📄 **[Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md](Pseudo_RM500U_Cellular_IP_Rotation_and_Fast_Recovery_Report.md)** | **频繁基站 IP 轮换与秒级恢复指南**：分析基站 IP 漂移机制、AT 指令 `<state>=0` 与 `<state>=1` 8秒退避差异，及 0.2 秒极速救网对策。 |
 | 📄 **[Pseudo_RM500U_ECM_IP_Passthrough_Guide.md](Pseudo_RM500U_ECM_IP_Passthrough_Guide.md)** | **ECM 模式 IP 直通 / Bridge 桥接模式** (`nat,0`) 设置指南，含 NV 参数修正与主路由器对接说明。 |
 | 📄 **[Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md](Pseudo_RM500U_Firmware_Bugs_Report_For_Author.md)** | 专门反馈给作者 **rA9** 的 Modem 侧三大 Bug 报告（SIPA 硬件休眠、`/32` 子网掩码及直通 DHCP 服务缺失）。 |
